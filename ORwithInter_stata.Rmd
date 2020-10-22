@@ -37,6 +37,13 @@ This demonstration can be found with more detailed explanation about how to visu
 
 [https://stats.idre.ucla.edu/stata/faq/how-can-i-understand-a-categorical-by-categorical-interaction-in-logistic-regression-stata-12/](https://stats.idre.ucla.edu/stata/faq/how-can-i-understand-a-categorical-by-categorical-interaction-in-logistic-regression-stata-12/)
 
+You can use the complete command to load the data into your Stata environment:
+
+```
+ use https://stats.idre.ucla.edu/stat/data/logit2-2, clear
+```
+
+
 The example dataset called logit2-2 includes two binary variables, `f` and `h`, and a continuous variable as covariate `cv1`. We build a model include `f` by `h` interaction, with the covariate `cv1`.
 
 ```{r  engine='stata', echo=FALSE, cache=TRUE}
