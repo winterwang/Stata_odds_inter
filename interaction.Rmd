@@ -1,0 +1,109 @@
+---
+title: "Interaction with both forms"
+author: "Chaochen Wang"
+date: "2020-11-23 09:27:25 JST created, `r Sys.time()` updated"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r message=FALSE, eval=FALSE, echo=FALSE}
+library(haven)
+lbw <- read_dta("http://www.stata-press.com/data/r12/lbw.dta")
+# str(lbw)
+lbw$race <- factor(lbw$race)
+lbw$smoke <- factor(lbw$smoke)
+lbw$ht <- factor(lbw$ht)
+a <- Epi::stat.table(list("Birthweight <2500g" = low, "History of hypertension"=ht), list(count(),percent(low)), data = lbw, margins = TRUE)
+# We first tabulate the data
+print(a, digits = c(percent = 2))
+epiDisplay::summ(lbw$age)
+
+Model0 <- glm(low ~ ht, data = lbw, family = binomial(link = "logit"))
+epiDisplay::logistic.display(Model0)
+
+
+
+Model1 <- glm(low ~ ht + age, data = lbw, family = binomial(link = "logit"))
+epiDisplay::logistic.display(Model1)
+
+lbw$Age2g <- lbw$age >= 30 # Advanced maternal age
+
+Model2 <- glm(low ~ ht + age + ht*Age2g, data = lbw, family = binomial(link = "logit"))
+epiDisplay::logistic.display(Model2)
+
+
+lmtest::lrtest(Model2, Model1)
+```
+
+```{r message=FALSE}
+# simulate hyt, age, and physical activity among 500 individuals
+set.seed(1000)
+# age standardized
+age = rnorm(500, mean = 0, sd = 1)
+
+age2g <- age < 1.0 # dichotomize age into older and younger group
+
+# physical activity standardized
+physical = rnorm(500, mean = 0, sd = 1)
+
+# assumed interaction effect between age2g and physical activity
+lp = -2 + 0.68 * age2g - 2 * physical - 3*age2g*physical
+link_lp = exp(lp)/(1 + exp(lp))
+
+# generate hypertension binary outcome
+hyt = (runif(500) < link_lp) 
+
+# correct model
+log.int <-  glm(hyt ~ age2g + physical + age2g*physical, family=binomial)
+summary(log.int)
+
+# model with age (cont. adjusted) + physical
+m0.1 <- glm(hyt ~ age + physical, family=binomial)
+summary(m0.1)
+
+# model with age (cont. adjutest) + physical + physical * age2g
+m0.2 <- glm(hyt ~ age + physical + physical * age2g, family=binomial)
+summary(m0.2)
+
+lmtest::lrtest(m0.1, m0.2)
+
+
+# linear comparison (b0, b2, b3, b4, b5)
+names(coef(m0.2))
+
+# we want physical effect in older age
+library(multcomp)
+
+summary(glht(m0.2, linfct = c("physical + physical:age2gTRUE = 0")))
+# Show the confidence interval
+mod.lh <- glht(m0.2, linfct = c("physical + physical:age2gTRUE = 0"))
+confint(mod.lh)
+
+exp(-4.9340) ; exp(-5.9842); exp(-3.8838)
+
+# physical effect in younger age
+
+exp(-1.92803) ; exp(-1.92803 - 1.96 * 0.49766); exp(-1.92803 + 1.96 * 0.49766)
+
+
+# correct effects
+# linear comparison (b0, b2, b3, b4)
+names(coef(log.int))
+
+# we want physical effect in older age
+summary(glht(log.int, linfct = c("physical + age2gTRUE:physical = 0")))
+# Show the confidence interval
+mod.lh <- glht(log.int, linfct = c("physical + age2gTRUE:physical = 0"))
+confint(mod.lh)
+
+exp(-4.9332) ; exp(-5.9828); exp(-3.8835)
+
+# physical effect in younger age
+
+exp(-1.9307) ; exp(-1.9307 - 1.96 * 0.4977); exp(-1.9307 + 1.96 * 0.4977)
+```
+
